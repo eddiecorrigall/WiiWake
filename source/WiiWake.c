@@ -6,8 +6,8 @@
 
 #include <wiiuse/wpad.h>
 
-void udp_broadcast(u16 port, char *message, u32 length)
-{
+void udp_broadcast(u16 port, char *message, u32 length) {
+	
 	while(net_init() < 0);
 	
 	struct sockaddr_in address;
@@ -15,34 +15,30 @@ void udp_broadcast(u16 port, char *message, u32 length)
 	s32 result;
 	int optval = 1;
 	s32 socket;
-
+	
 	memset(&address, 0, sizeof(struct sockaddr_in));
 	
 	address.sin_family = AF_INET;
-    address.sin_addr.s_addr = INADDR_BROADCAST;
-    address.sin_port = htons(port);
+	address.sin_addr.s_addr = INADDR_BROADCAST;
+	address.sin_port = htons(port);
 	address.sin_len = sizeof(struct sockaddr);
 	
-    if((socket = net_socket(PF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0)
-	{
+	if((socket = net_socket(PF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0) {
 		fprintf(stderr, "Failed to build socket.");
 		exit(1);
 	}
 	
-	if((result = net_ioctl(socket, FIONBIO, (char *)&optval)) < 0)
-	{
+	if((result = net_ioctl(socket, FIONBIO, (char *)&optval)) < 0) {
 		fprintf(stderr, "Failed to set non-blocking IO mode (%d).", result);
 		exit(1);
 	}
 	
-	if((result = net_setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (char *)&optval, sizeof(optval))) < 0)
-	{
+	if((result = net_setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (char *)&optval, sizeof(optval))) < 0) {
 		fprintf(stderr, "Failed to set broadcasting mode (%d).", result);
 		//exit(1);
 	}
 	
-	if((result = net_sendto(socket, message, length, 0, (struct sockaddr *)&address, address.sin_len)) < 0)
-	{
+	if((result = net_sendto(socket, message, length, 0, (struct sockaddr *)&address, address.sin_len)) < 0) {
 		fprintf(stderr, "Failed to broadcast message (%d).", result);
 		//exit(1);
 	}
@@ -50,33 +46,29 @@ void udp_broadcast(u16 port, char *message, u32 length)
 	net_close(socket);
 }
 
-void udp_wake(u8 *ethaddr, u16 port)
-{
+void udp_wake(u8 *ethaddr, u16 port) {
+	
 	const u8 rows = 6;
 	const u8 columns = 17;
 	
 	char message[102] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 	
-	u8 r = 1; // Skip first row
-	while(r < rows)
-	{
+	u8 r = 1; // Skip first row, its already written
+	while(r < rows) {
 		u8 c = 0;
-		while(c < columns)
-		{
+		while(c < columns) {
 			u16 index = r * columns + c;
 			message[index] = ethaddr[c];
-			
 			c++;
 		}
-		
 		r++;
 	}
 	
 	udp_broadcast(port, message, rows * columns);
 }
 
-int main(int argc, char **argv)
-{
+int main(int argc, char **argv) {
+	
 	VIDEO_Init();
 	WPAD_Init();
 	
@@ -95,15 +87,14 @@ int main(int argc, char **argv)
 	
 	printf("\x1b[2;0H");
 	
-	u8 ethaddr[] = { 0x48, 0x5B, 0x39, 0x05, 0x52, 0x08 };
-	
+	u8 ethaddr[] = { 0x48, 0x5B, 0x39, 0x05, 0x52, 0x08 }; // Target computers MAC address
 	udp_wake(ethaddr, 9);
-
-	while(1)
-	{
-		VIDEO_WaitVSync();
-		WPAD_ScanPads();
+	
+	while(1) {
 		
+		VIDEO_WaitVSync();
+		
+		WPAD_ScanPads();
 		if(WPAD_ButtonsDown(0)) exit(0);
 	}
 	
