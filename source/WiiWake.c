@@ -6,7 +6,7 @@
 
 #include <wiiuse/wpad.h>
 
-void udp_broadcast(u16 port, char *message, u32 length) {
+int udp_broadcast(u16 port, char *message, u32 length) {
 	
 	while(net_init() < 0);
 	
@@ -25,28 +25,30 @@ void udp_broadcast(u16 port, char *message, u32 length) {
 	
 	if((socket = net_socket(PF_INET, SOCK_DGRAM, IPPROTO_IP)) < 0) {
 		fprintf(stderr, "Failed to build socket.");
-		exit(1);
+		return -1;
 	}
 	
 	if((result = net_ioctl(socket, FIONBIO, (char *)&optval)) < 0) {
 		fprintf(stderr, "Failed to set non-blocking IO mode (%d).", result);
-		exit(1);
+		return -1;
 	}
 	
 	if((result = net_setsockopt(socket, SOL_SOCKET, SO_BROADCAST, (char *)&optval, sizeof(optval))) < 0) {
 		fprintf(stderr, "Failed to set broadcasting mode (%d).", result);
-		//exit(1);
+		return -1;
 	}
 	
 	if((result = net_sendto(socket, message, length, 0, (struct sockaddr *)&address, address.sin_len)) < 0) {
 		fprintf(stderr, "Failed to broadcast message (%d).", result);
-		//exit(1);
+		return -1;
 	}
 	
 	net_close(socket);
+	
+	return 0;
 }
 
-void udp_wake(u8 *ethaddr, u16 port) {
+int udp_wake(u8 *ethaddr, u16 port) {
 	
 	const u8 rows = 6;
 	const u8 columns = 17;
@@ -64,7 +66,7 @@ void udp_wake(u8 *ethaddr, u16 port) {
 		r++;
 	}
 	
-	udp_broadcast(port, message, rows * columns);
+	return udp_broadcast(port, message, rows * columns);
 }
 
 int main(int argc, char **argv) {
@@ -87,8 +89,14 @@ int main(int argc, char **argv) {
 	
 	printf("\x1b[2;0H");
 	
-	u8 ethaddr[] = { 0x48, 0x5B, 0x39, 0x05, 0x52, 0x08 }; // Target computers MAC address
-	udp_wake(ethaddr, 9);
+	u8 ethaddr[] = { 0x48, 0x5B, 0x39, 0x05, 0x52, 0x08 }; // Target computer MAC address
+	
+	if (udp_wake(ethaddr, 9) < 0) {
+		printf("Failed!\n");
+	}
+	else {
+		printf("Success!\n");
+	}
 	
 	while(1) {
 		
