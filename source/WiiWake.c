@@ -50,10 +50,10 @@ int udp_broadcast(u16 port, char *message, u32 length) {
 
 int udp_wake(u8 *ethaddr, u16 port) {
 	
-	#DEFINE ROWS (6)
-	#DEFINE COLS (17)
-	#DEFINE MESSAGE_LENGTH (ROWS*COLS)
+	#define ROWS (6)
+	#define COLS (17)
 	
+	#define MESSAGE_LENGTH (ROWS*COLS)
 	char message[MESSAGE_LENGTH] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; // Initialize with WOL header
 	u8 r, c;
 	
