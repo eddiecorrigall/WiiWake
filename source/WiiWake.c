@@ -8,7 +8,7 @@
 
 int udp_broadcast(u16 port, char *message, u32 length) {
 	
-	while(net_init() < 0);
+	while(net_init() < 0); // Wait until Wii network connection is established
 	
 	struct sockaddr_in address;
 	
@@ -50,23 +50,27 @@ int udp_broadcast(u16 port, char *message, u32 length) {
 
 int udp_wake(u8 *ethaddr, u16 port) {
 	
-	const u8 rows = 6;
-	const u8 columns = 17;
+	#DEFINE ROWS (6)
+	#DEFINE COLS (17)
+	#DEFINE MESSAGE_LENGTH (ROWS*COLS)
 	
-	char message[102] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+	char message[MESSAGE_LENGTH] = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff }; // Initialize with WOL header
+	u8 r, c;
 	
-	u8 r = 1; // Skip first row, its already written
-	while(r < rows) {
-		u8 c = 0;
-		while(c < columns) {
-			u16 index = r * columns + c;
-			message[index] = ethaddr[c];
+	r = 1; // Skip first row, its already written as header
+	while(r < ROWS) {
+		c = 0;
+		while(c < COLS) {
+			message[c + r*COLS] = ethaddr[c]; // Repeat MAC address for remainder of message
 			c++;
 		}
 		r++;
 	}
 	
-	return udp_broadcast(port, message, rows * columns);
+	// UDP broadcast,
+	// A WOL supported either net card will read the header in low power mode,
+	// Check if the either addr matches its own, then decide if it wants to boot.
+	return udp_broadcast(port, message, MESSAGE_LENGTH);
 }
 
 int main(int argc, char **argv) {
@@ -103,7 +107,11 @@ int main(int argc, char **argv) {
 		VIDEO_WaitVSync();
 		
 		WPAD_ScanPads();
-		if(WPAD_ButtonsDown(0)) exit(0);
+		if(WPAD_ButtonsDown(0)) exit(0); // Allow user escape
+		
+		// TODO:
+		// * Add a textbox for the user to enter a MAC addr
+		// * Add a submit button to broadcast the WOL packet, ie. call udp_wake
 	}
 	
 	return 0;
